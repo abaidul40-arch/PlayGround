@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#101a20" />
+  <title>Neon Coast — Open City Patrol</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}</script>
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="game"></canvas>
+    <div class="vignette"></div>
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">NC<span>•</span></div><div><div class="eyebrow">COASTAL DISTRICT</div><div class="brand-name">NEON COAST <span class="edition">PATROL</span></div></div></div>
+      <div class="top-actions"><div class="clock"><span class="live-dot"></span><span id="clockText">18:42</span><span class="clock-label">LOCAL</span></div><button id="timeToggle" class="icon-button" aria-label="Toggle day and night">☼ <span>DAY / NIGHT</span></button><button id="soundToggle" class="icon-button" aria-label="Toggle sound">♫ <span>SOUND</span></button><button id="pauseButton" class="icon-button" aria-label="Pause game">Ⅱ <span>PAUSE</span></button></div>
+    </header>
+    <section class="mission-card glass">
+      <div class="mission-head"><span class="mission-icon">✦</span><div><div class="eyebrow">ACTIVE CONTRACT <span class="contract-id">#NC-07</span></div><h1>Clear the waterfront</h1></div><div class="mission-state"><i></i> IN PROGRESS</div></div>
+      <p>Stop the rogue crew before they reach the marina.</p>
+      <div class="mission-progress"><div class="progress-track"><i id="missionProgress"></i></div><span id="missionCount">0 / 8</span></div>
+      <div class="mission-foot"><span>◈ <b>REWARD</b> 2,400 CR</span><span>⌖ <b>AREA</b> OLD HARBOR</span></div>
+    </section>
+    <section class="status-card glass"><div class="status-label">PATROL VEHICLE <span id="vehicleState">READY</span></div><div class="car-info"><div class="car-icon">▰</div><div><strong>VAPOR GT</strong><small>SPORT / AWD</small></div><div class="speed-wrap"><strong><span id="speedValue">000</span></strong><small>KM/H</small></div></div><div class="meter"><span>ENGINE</span><div><i id="engineBar"></i></div><b id="engineValue">100%</b></div><div class="meter"><span>BOOST</span><div><i id="boostBar"></i></div><b id="boostValue">100%</b></div><div class="fuel-note"><span class="fuel-dot"></span> ELECTRIC · <span id="chargeValue">82%</span> CHARGE</div></section>
+    <section class="player-card glass"><div class="portrait">✦</div><div class="player-info"><div class="eyebrow">FIELD AGENT <span class="online">● LIVE</span></div><strong>RIDER <span>// 07</span></strong><div class="health-track"><i id="healthBar"></i></div></div><div class="health-value"><strong id="healthValue">100</strong><small>VITALS</small></div></section>
+    <section class="minimap glass"><div class="mini-head"><span>◉ DISTRICT MAP</span><span id="mapHeading">N</span></div><canvas id="mapCanvas" width="180" height="180"></canvas><div class="map-foot"><span><i class="legend-player"></i> YOU</span><span><i class="legend-threat"></i> THREATS</span></div></section>
+    <div class="weapon-chip glass"><span class="weapon-icon">⌁</span><div><b>ARC PULSE</b><small>ENERGY SIDEARM · ∞</small></div><kbd>SPACE</kbd></div>
+    <div class="objective-toast" id="toast"><span>✦</span><b>AREA SECURED</b><small>Nice work, agent.</small></div>
+    <div class="crosshair" id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+    <div class="help-pill glass" id="helpPill"><span>WASD</span> MOVE <i>·</i> <span>E</span> ENTER / EXIT <i>·</i> <span>SPACE</span> FIRE <i>·</i> <span>SHIFT</span> BOOST <button id="dismissHelp" aria-label="Dismiss controls">×</button></div>
+    <div class="pause-overlay" id="pauseOverlay"><div class="pause-panel glass"><div class="eyebrow">NEON COAST // PATROL</div><h2>PAUSED</h2><p>The city can wait.</p><button id="resumeButton" class="primary-button">RESUME PATROL <span>→</span></button></div></div>
+    <div class="mobile-controls" id="mobileControls"><div class="stick-zone" id="stickZone"><div class="stick-base"><div class="stick-knob" id="stickKnob"></div></div></div><div class="mobile-actions"><button class="touch-button fire-button" id="fireTouch"><span>✦</span><small>FIRE</small></button><button class="touch-button drive-button" id="driveTouch"><span>↗</span><small>DRIVE</small></button><button class="touch-button enter-button" id="enterTouch"><span>↔</span><small>ENTER</small></button><button class="touch-button boost-button" id="boostTouch"><span>»</span><small>BOOST</small></button></div></div>
+    <div class="loading" id="loading"><div class="loader-mark">NC<span>•</span></div><div class="loading-line"><i></i></div><span>OPENING THE COAST</span></div>
+    <div class="toast-feed" id="toastFeed"></div>
+    <div class="boss-banner" id="bossBanner"><div class="boss-label">⚠ WANTED: THE MARINER <span>ELITE CREW LEADER</span></div><div class="boss-track"><i id="bossHealth"></i></div></div>
+    <div class="damage-flash" id="damageFlash"></div>
+  </main>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
