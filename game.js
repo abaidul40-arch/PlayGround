@@ -47,8 +47,8 @@ camera.position.set(0, 8, 16);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// Keep the low-poly city responsive on integrated graphics and mobile devices.
+renderer.shadowMap.enabled = false;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
@@ -340,6 +340,54 @@ makePet(-44, 22, 'CAT');
 makePet(56, -48, 'DOG');
 
 const keys = {};
+const touchKeys = { w: false, a: false, s: false, d: false };
+let touchBoost = false;
+
+function updateTouchStick(event) {
+  const rect = ui.stickZone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const radius = (rect.width - 26 - 48) / 2;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+  const distance = Math.hypot(dx, dy);
+  const scale = distance > radius ? radius / distance : 1;
+  const x = dx * scale;
+  const y = dy * scale;
+  ui.stickKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  touchKeys.a = x < -radius * 0.2;
+  touchKeys.d = x > radius * 0.2;
+  touchKeys.w = y < -radius * 0.2;
+  touchKeys.s = y > radius * 0.2;
+}
+
+function releaseTouchStick() {
+  for (const key of Object.keys(touchKeys)) touchKeys[key] = false;
+  ui.stickKnob.style.transform = 'translate(-50%, -50%)';
+}
+
+ui.stickZone.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  ui.stickZone.setPointerCapture(event.pointerId);
+  updateTouchStick(event);
+});
+ui.stickZone.addEventListener('pointermove', (event) => {
+  if (ui.stickZone.hasPointerCapture(event.pointerId)) updateTouchStick(event);
+});
+ui.stickZone.addEventListener('pointerup', releaseTouchStick);
+ui.stickZone.addEventListener('pointercancel', releaseTouchStick);
+ui.boostTouch.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  touchBoost = true;
+  ui.boostTouch.setPointerCapture(event.pointerId);
+});
+ui.boostTouch.addEventListener('pointerup', () => { touchBoost = false; });
+ui.boostTouch.addEventListener('pointercancel', () => { touchBoost = false; });
+window.addEventListener('blur', () => {
+  releaseTouchStick();
+  touchBoost = false;
+});
+
 window.addEventListener('keydown', (event) => {
   keys[event.key.toLowerCase()] = true;
   if (event.key === ' ') {
@@ -439,6 +487,7 @@ function showGlobalToast(text) {
 
 function setPaused(nextState) {
   state.paused = nextState;
+  ui.pauseOverlay.classList.toggle('show', nextState);
   ui.pauseOverlay.style.display = nextState ? 'grid' : 'none';
   ui.pauseButton.textContent = nextState ? '▶ RESUME' : 'Ⅱ PAUSE';
 }
@@ -542,38 +591,40 @@ function firePulse() {
   if (state.paused || player.fireCooldown > 0) return;
   player.fireCooldown = 0.22;
   const origin = player.mode === 'car' ? playerCar.position.clone().add(new THREE.Vector3(0, 1.2, -3.1)) : agent.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-  const dir = new THREE.Vector3(Math.sin(player.heading), 0, -Math.cos(player.heading));
-  if (player.mode === 'foot') {
-    dir.set(Math.sin(player.heading), 0, -Math.cos(player.heading));
-  }
-  activatePulse(origin, dir);
-
-  let damageDealt = false;
+  const facing = new THREE.Vector3(Math.sin(player.heading), 0, -Math.cos(player.heading));
+  // Arc pulses softly lock onto the closest nearby hostile so combat works from either vehicle mode.
+  let target = null;
+  let targetDistance = 42;
   for (const threat of enemyCars) {
     if (!threat.alive) continue;
-    const toTarget = threat.mesh.position.clone().sub(origin);
-    const dist = toTarget.length();
-    const forward = dir.clone();
-    const angle = forward.angleTo(toTarget.clone().normalize());
-    if (dist < 24 && angle < 0.65) {
-      threat.hp -= 34;
-      damageDealt = true;
-      if (threat.hp <= 0) {
-        threat.alive = false;
-        threat.mesh.visible = false;
-        state.kills += 1;
-        showToast(threat.boss ? 'MARINER DOWN' : 'THREAT ELIMINATED', threat.boss ? 'Bayfront secured.' : 'Hostile neutralized.');
-        if (state.kills >= state.missionTarget) {
-          showToast('AREA SECURED', 'The waterfront is clear.');
-          ui.bossBanner.style.opacity = '0';
-          setTimeout(() => showGlobalToast('Mission complete — district safe.'), 500);
-        }
-      }
+    const distance = threat.mesh.position.distanceTo(origin);
+    if (distance < targetDistance) {
+      target = threat;
+      targetDistance = distance;
     }
   }
-  if (!damageDealt) {
-    showGlobalToast('Pulse discharged');
+
+  let damageDealt = false;
+  if (target) {
+    const direction = target.mesh.position.clone().sub(origin).setY(0).normalize();
+    activatePulse(origin, direction);
+    target.hp -= target.boss ? 28 : 34;
+    damageDealt = true;
+    if (target.hp <= 0) {
+      target.alive = false;
+      target.mesh.visible = false;
+      state.kills += 1;
+      showToast(target.boss ? 'MARINER DOWN' : 'THREAT ELIMINATED', target.boss ? 'Bayfront secured.' : 'Hostile neutralized.');
+      if (state.kills >= state.missionTarget) {
+        showToast('AREA SECURED', 'The waterfront is clear.');
+        ui.bossBanner.style.opacity = '0';
+        setTimeout(() => showGlobalToast('Mission complete — district safe.'), 500);
+      }
+    }
+  } else {
+    activatePulse(origin, facing);
   }
+  if (!damageDealt) showGlobalToast('No hostile in pulse range');
 }
 
 function clampToMap(value, size = 150) {
@@ -590,11 +641,11 @@ function setActivePlayerPositionFollow() {
 }
 
 const keysDown = {
-  accelerate: () => !!(keys.w || keys.arrowup),
-  brake: () => !!(keys.s || keys.arrowdown),
-  left: () => !!(keys.a || keys.arrowleft),
-  right: () => !!(keys.d || keys.arrowright),
-  boost: () => !!(keys.shift),
+  accelerate: () => !!(keys.w || keys.arrowup || touchKeys.w),
+  brake: () => !!(keys.s || keys.arrowdown || touchKeys.s),
+  left: () => !!(keys.a || keys.arrowleft || touchKeys.a),
+  right: () => !!(keys.d || keys.arrowright || touchKeys.d),
+  boost: () => !!(keys.shift || touchBoost),
 };
 
 function updatePlayer(dt) {
@@ -790,9 +841,12 @@ ui.dismissHelp.addEventListener('click', () => ui.helpPill.classList.add('hidden
 ui.fireTouch.addEventListener('click', firePulse);
 ui.driveTouch.addEventListener('click', () => setVehicleMode(true));
 ui.enterTouch.addEventListener('click', () => toggleVehicleMode());
-ui.boostTouch.addEventListener('click', () => {
-  keys.shift = true;
-  setTimeout(() => { keys.shift = false; }, 200);
+ui.boostTouch.addEventListener('click', (event) => {
+  // Pointer input is handled continuously above; retain a short tap boost for accessibility clicks.
+  if (event.detail === 0) {
+    keys.shift = true;
+    setTimeout(() => { keys.shift = false; }, 200);
+  }
 });
 
 window.addEventListener('resize', () => {
