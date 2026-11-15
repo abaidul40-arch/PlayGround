@@ -453,8 +453,8 @@ function spawnEnemy(x, z, boss = false) {
   const threat = {
     mesh: car,
     alive: true,
-    hp: boss ? 140 : 48,
-    maxHp: boss ? 140 : 48,
+    hp: boss ? 42 : 34,
+    maxHp: boss ? 42 : 34,
     speed: boss ? 18 : 12,
     strafe: Math.random() * Math.PI * 2,
     attackCooldown: 0,
@@ -594,7 +594,7 @@ function firePulse() {
   const facing = new THREE.Vector3(Math.sin(player.heading), 0, -Math.cos(player.heading));
   // Arc pulses softly lock onto the closest nearby hostile so combat works from either vehicle mode.
   let target = null;
-  let targetDistance = 42;
+  let targetDistance = 180;
   for (const threat of enemyCars) {
     if (!threat.alive) continue;
     const distance = threat.mesh.position.distanceTo(origin);
@@ -608,7 +608,7 @@ function firePulse() {
   if (target) {
     const direction = target.mesh.position.clone().sub(origin).setY(0).normalize();
     activatePulse(origin, direction);
-    target.hp -= target.boss ? 28 : 34;
+    target.hp -= target.boss ? 42 : 40;
     damageDealt = true;
     if (target.hp <= 0) {
       target.alive = false;
